@@ -75,6 +75,7 @@ function light_world:refreshScreenSize(w, h)
 	self.render_buffer    = love.graphics.newCanvas(w, h)
 	self.shadow_buffer    = love.graphics.newCanvas(w, h)
 	self.normalMap        = love.graphics.newCanvas(w, h)
+    self.floorNormalMap   = love.graphics.newCanvas(w, h)
 	self.shadowMap        = love.graphics.newCanvas(w, h)
 	self.glowMap          = love.graphics.newCanvas(w, h)
 	self.refractionMap    = love.graphics.newCanvas(w, h)
@@ -128,6 +129,18 @@ function light_world:drawShadows(l,t,w,h,s)
                     end
     end)
 
+    love.graphics.setCanvas( self.floorNormalMap )
+    love.graphics.clear()
+    love.graphics.setCanvas()
+    util.drawto(self.floorNormalMap, l, t, s, function()
+                    for i = 1, #self.visibleBodies do
+                        if not self.visibleBodies[i].castsNoShadow then
+                            self.visibleBodies[i]:drawNormal()
+                        end
+                    end
+    end)
+
+    self.shadowShader:send('floorNormalMap', self.floorNormalMap)
     self.shadowShader:send('normalMap', self.normalMap)
     self.shadowShader:send("invert_normal", self.normalInvert == true)
 
@@ -168,7 +181,6 @@ function light_world:drawShadows(l,t,w,h,s)
         self.shadowShader:send("lightPosition", {(light.x + l/s) * s, (light.y + t/s) * s, (light.z * 10) / 255.0})
         self.shadowShader:send('lightRange',light.range * s)
         self.shadowShader:send("lightSmooth", light.smooth)
-        self.shadowShader:send("lightGlow", {1.0 - light.glowSize, light.glowStrength})
         util.drawCanvasToCanvas(self.shadowMap, self.shadow_buffer, {
                                     blendmode = 'add',
                                     shader = self.shadowShader,
